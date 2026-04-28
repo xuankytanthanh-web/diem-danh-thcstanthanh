@@ -437,23 +437,38 @@ export default function App() {
       if (!imageSrc) throw new Error('Không thể chụp ảnh từ camera');
 
       // Prepare images for Gemini
-      const referenceImage = selectedStudent.photoUrl.split(',')[1];
-      const currentImage = imageSrc.split(',')[1];
+      // Resize ảnh xuống 320x240 trước khi gửi Gemini để tăng tốc
+      const resizeBase64 = (base64: string, maxW = 320, maxH = 240): Promise<string> =>
+        new Promise(resolve => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.6).split(',')[1]);
+          };
+          img.src = 'data:image/jpeg;base64,' + base64;
+        });
+
+      const referenceImage = await resizeBase64(selectedStudent.photoUrl.split(',')[1]);
+      const currentImage = await resizeBase64(imageSrc.split(',')[1]);
 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-lite-preview",
+        model: "gemini-2.0-flash-lite",
         contents: [
           {
             parts: [
-              { text: "So sánh hai hình ảnh này. Đây có phải là cùng một người không? Trả lời bằng JSON: { 'match': boolean, 'confidence': number (0-1) }. Chỉ trả về JSON." },
+              { text: "Same person in both images? JSON only: {\"match\":bool,\"confidence\":0-1}" },
               { inlineData: { data: referenceImage, mimeType: "image/jpeg" } },
               { inlineData: { data: currentImage, mimeType: "image/jpeg" } }
             ]
           }
         ],
         config: {
-          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+          thinkingConfig: { thinkingLevel: ThinkingLevel.NONE },
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
@@ -1239,10 +1254,10 @@ export default function App() {
                     ref={webcamRef}
                     screenshotFormat="image/jpeg"
                     className="w-full h-full object-cover"
-                    videoConstraints={{ facingMode: "user" }}
+                    videoConstraints={{ facingMode: "user", width: 480, height: 360 }}
                     mirrored={false}
                     imageSmoothing={true}
-                    screenshotQuality={0.7}
+                    screenshotQuality={0.5}
                     disablePictureInPicture={true}
                     forceScreenshotSourceSize={false}
                     onUserMedia={() => {}}
