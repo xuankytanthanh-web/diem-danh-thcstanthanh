@@ -1,0 +1,17 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/auth/google/url", "destination": "/api/auth/google/url.js" },
+    { "source": "/api/auth/google/callback", "destination": "/api/auth/google/callback.js" },
+    { "source": "/api/auth/status", "destination": "/api/auth/status.js" },
+    { "source": "/api/export/google-drive", "destination": "/api/export/google-drive.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
